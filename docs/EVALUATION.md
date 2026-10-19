@@ -2,7 +2,8 @@
 
 DocToSheet is evaluated on two kinds of documents. Code: [`eval/`](../eval). The extraction code was frozen at the
 commit recorded in `eval/results/FROZEN_COMMIT` before the test numbers below were measured, and each test set was
-evaluated once.
+evaluated once. (Later commits changed only the wording of warnings, formatting and the user interface, not
+extraction.)
 
 ## 1. Independent invoices (ZUGFeRD corpus)
 
@@ -26,20 +27,20 @@ layout was designed by someone else — the closest we have to "invoices from th
 <!-- zugferd:start -->
 | field | printed PDF (text layer) | same pages as images (OCR) | invoices with this field |
 |---|---|---|---|
-| invoice number | 22.2 | — | 72 |
-| invoice date | 62.5 | — | 72 |
-| due date | 82.6 | — | 23 |
-| currency | 98.6 | — | 72 |
-| seller | 61.1 | — | 72 |
-| seller VAT no. | 69.0 | — | 71 |
-| buyer | 52.8 | — | 72 |
-| buyer VAT no. | 71.4 | — | 14 |
-| IBAN | 76.0 | — | 25 |
-| net amount | 97.2 | — | 72 |
-| VAT amount | 90.3 | — | 72 |
-| total amount | 97.2 | — | 72 |
-| **all fields** | **72.8** | **—** | |
-| values marked ✓ that were correct | 90.5 (of 485) | — | |
+| invoice number | 22.2 | 30.6 | 72 |
+| invoice date | 62.5 | 54.2 | 72 |
+| due date | 82.6 | 87.0 | 23 |
+| currency | 98.6 | 100.0 | 72 |
+| seller | 61.1 | 61.1 | 72 |
+| seller VAT no. | 69.0 | 59.2 | 71 |
+| buyer | 52.8 | 52.8 | 72 |
+| buyer VAT no. | 71.4 | 57.1 | 14 |
+| IBAN | 76.0 | 80.0 | 25 |
+| net amount | 97.2 | 97.2 | 72 |
+| VAT amount | 90.3 | 84.7 | 72 |
+| total amount | 97.2 | 95.8 | 72 |
+| **all fields** | **72.8** | **71.2** | |
+| values marked ✓ that were correct | 90.5 (of 485) | 91.9 (of 434) | |
 <!-- zugferd:end -->
 
 Amounts are the strongest part: totals are the anchor of every invoice and are cross-checked. Invoice numbers, names
@@ -56,12 +57,12 @@ deliberately fail their check digits; DocToSheet reports them with low confidenc
 <!-- edb:start -->
 | | text PDFs | simulated scans (OCR) | previous best on the scans |
 |---|---|---|---|
-| fields correct | 95.7 | — | 67.3 (EasyOCR → Qwen2.5-1.5B) |
-| invoices with all 12 fields correct | 75.6 | — | 4.3 |
-| values marked ✓ that were correct | 100.0 | — | — |
-| line items: invoices with the right number of rows | 97.4 | — | — |
-| line items: amounts correct | 97.1 | — | — |
-| seconds per invoice (one process) | 0.155 | — | — |
+| fields correct | 95.7 | 88.5 | 67.3 (EasyOCR → Qwen2.5-1.5B) |
+| invoices with all 12 fields correct | 75.6 | 37.6 | 4.3 |
+| values marked ✓ that were correct | 100.0 | 98.2 | — |
+| line items: invoices with the right number of rows | 97.4 | 75.4 | — |
+| line items: amounts correct | 97.1 | 74.9 | — |
+| seconds per invoice (one process) | 0.155 | 4.771 | — |
 <!-- edb:end -->
 
 Per field:
@@ -69,18 +70,18 @@ Per field:
 <!-- edb-fields:start -->
 | field | text PDFs | simulated scans |
 |---|---|---|
-| invoice number | 98.1 | — |
-| invoice date | 100.0 | — |
-| due date | 100.0 | — |
-| currency | 93.4 | — |
-| seller | 93.3 | — |
-| seller VAT no. | 85.8 | — |
-| buyer | 98.2 | — |
-| buyer VAT no. | 88.5 | — |
-| IBAN | 91.3 | — |
-| net amount | 100.0 | — |
-| VAT amount | 100.0 | — |
-| total amount | 99.8 | — |
+| invoice number | 98.1 | 88.2 |
+| invoice date | 100.0 | 96.2 |
+| due date | 100.0 | 93.7 |
+| currency | 93.4 | 92.8 |
+| seller | 93.3 | 72.1 |
+| seller VAT no. | 85.8 | 76.4 |
+| buyer | 98.2 | 75.7 |
+| buyer VAT no. | 88.5 | 83.1 |
+| IBAN | 91.3 | 86.8 |
+| net amount | 100.0 | 99.2 |
+| VAT amount | 100.0 | 97.9 |
+| total amount | 99.8 | 99.8 |
 <!-- edb-fields:end -->
 
 "Previous best" is the best published EuroDocBench baseline on the scan track. EuroDocBench's synthetic layouts are
@@ -95,6 +96,7 @@ accuracy.
 | EuroDocBench dev, text | 96.0 | 100.0 |
 | EuroDocBench dev, scans | 89.3 | 98.8 |
 | ZUGFeRD dev producers, text | 92.0 | 98.4 |
+| ZUGFeRD dev producers, OCR | 91.0 | 98.7 |
 <!-- dev:end -->
 
 ## Limitations

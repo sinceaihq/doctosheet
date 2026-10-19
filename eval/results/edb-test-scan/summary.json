@@ -1,0 +1,74 @@
+{
+  "split": "test",
+  "track": "scan",
+  "documents": 1200,
+  "errors": 0,
+  "field_accuracy": 0.8849,
+  "field_precision": 0.9395,
+  "field_recall": 0.8813,
+  "document_accuracy": 0.3758,
+  "per_field": {
+    "invoice_number": 0.8825,
+    "issue_date": 0.9617,
+    "due_date": 0.9367,
+    "currency": 0.9283,
+    "seller_name": 0.7208,
+    "seller_vat_id": 0.7642,
+    "buyer_name": 0.7567,
+    "buyer_vat_id": 0.8308,
+    "iban": 0.8683,
+    "net_amount": 0.9925,
+    "vat_amount": 0.9792,
+    "total_amount": 0.9975
+  },
+  "per_locale": {
+    "cs-CZ": 0.8717,
+    "da-DK": 0.7308,
+    "de-DE": 0.9133,
+    "en-IE": 0.905,
+    "es-ES": 0.9292,
+    "fi-FI": 0.9258,
+    "fr-FR": 0.9017,
+    "it-IT": 0.895,
+    "nl-NL": 0.9058,
+    "pl-PL": 0.8383,
+    "pt-PT": 0.8992,
+    "sv-SE": 0.9033
+  },
+  "per_layout": {
+    "classic": 0.9174,
+    "compact": 0.8497,
+    "grid": 0.8601,
+    "modern": 0.8806,
+    "narrow": 0.917
+  },
+  "confidence_calibration": {
+    "high": {
+      "n": 8954,
+      "correct": 0.9815
+    },
+    "medium": {
+      "n": 999,
+      "correct": 0.6837
+    },
+    "low": {
+      "n": 2797,
+      "correct": 0.896
+    }
+  },
+  "lines": {
+    "line_count_correct": 0.7542,
+    "documents_all_lines_correct_excl_vat_rate": 0.5717,
+    "cell_accuracy": {
+      "description": 0.6846,
+      "quantity": 0.7404,
+      "unit_price": 0.708,
+      "amount": 0.7491
+    },
+    "vat_rate_accuracy_where_printed": 0.684,
+    "lines_with_printed_vat_rate": 788,
+    "gold_lines": 4826
+  },
+  "seconds_per_document": 4.771,
+  "wall_seconds": 1435.2
+}

@@ -1,0 +1,91 @@
+{
+  "split": "test",
+  "track": "ocr",
+  "documents": 72,
+  "producers": [
+    "FNFE-factur-x-examples",
+    "PHP_@gpFacturX",
+    "XML-Rechnung",
+    "symtrax"
+  ],
+  "errors": [],
+  "field_accuracy": 0.7123,
+  "per_field": {
+    "invoice_number": {
+      "accuracy": 0.3056,
+      "n": 72,
+      "extra_when_gold_missing": 0
+    },
+    "issue_date": {
+      "accuracy": 0.5417,
+      "n": 72,
+      "extra_when_gold_missing": 0
+    },
+    "due_date": {
+      "accuracy": 0.8696,
+      "n": 23,
+      "extra_when_gold_missing": 21
+    },
+    "currency": {
+      "accuracy": 1.0,
+      "n": 72,
+      "extra_when_gold_missing": 0
+    },
+    "seller_name": {
+      "accuracy": 0.6111,
+      "n": 72,
+      "extra_when_gold_missing": 0
+    },
+    "seller_vat_id": {
+      "accuracy": 0.5915,
+      "n": 71,
+      "extra_when_gold_missing": 1
+    },
+    "buyer_name": {
+      "accuracy": 0.5278,
+      "n": 72,
+      "extra_when_gold_missing": 0
+    },
+    "buyer_vat_id": {
+      "accuracy": 0.5714,
+      "n": 14,
+      "extra_when_gold_missing": 3
+    },
+    "iban": {
+      "accuracy": 0.8,
+      "n": 25,
+      "extra_when_gold_missing": 5
+    },
+    "net_amount": {
+      "accuracy": 0.9722,
+      "n": 72,
+      "extra_when_gold_missing": 0
+    },
+    "vat_amount": {
+      "accuracy": 0.8472,
+      "n": 72,
+      "extra_when_gold_missing": 0
+    },
+    "total_amount": {
+      "accuracy": 0.9583,
+      "n": 72,
+      "extra_when_gold_missing": 0
+    }
+  },
+  "confidence_calibration": {
+    "high": {
+      "n": 434,
+      "correct": 0.9194
+    },
+    "medium": {
+      "n": 57,
+      "correct": 0.4737
+    },
+    "low": {
+      "n": 138,
+      "correct": 0.5725
+    }
+  },
+  "line_count_correct": 0.3472,
+  "seconds_per_document": 24.68
+}

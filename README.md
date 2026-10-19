@@ -97,20 +97,20 @@ XML, which serves as the exact answer; DocToSheet was made to ignore the XML and
 <!-- zugferd:start -->
 | field | printed PDF (text layer) | same pages as images (OCR) | invoices with this field |
 |---|---|---|---|
-| invoice number | 22.2 | — | 72 |
-| invoice date | 62.5 | — | 72 |
-| due date | 82.6 | — | 23 |
-| currency | 98.6 | — | 72 |
-| seller | 61.1 | — | 72 |
-| seller VAT no. | 69.0 | — | 71 |
-| buyer | 52.8 | — | 72 |
-| buyer VAT no. | 71.4 | — | 14 |
-| IBAN | 76.0 | — | 25 |
-| net amount | 97.2 | — | 72 |
-| VAT amount | 90.3 | — | 72 |
-| total amount | 97.2 | — | 72 |
-| **all fields** | **72.8** | **—** | |
-| values marked ✓ that were correct | 90.5 (of 485) | — | |
+| invoice number | 22.2 | 30.6 | 72 |
+| invoice date | 62.5 | 54.2 | 72 |
+| due date | 82.6 | 87.0 | 23 |
+| currency | 98.6 | 100.0 | 72 |
+| seller | 61.1 | 61.1 | 72 |
+| seller VAT no. | 69.0 | 59.2 | 71 |
+| buyer | 52.8 | 52.8 | 72 |
+| buyer VAT no. | 71.4 | 57.1 | 14 |
+| IBAN | 76.0 | 80.0 | 25 |
+| net amount | 97.2 | 97.2 | 72 |
+| VAT amount | 90.3 | 84.7 | 72 |
+| total amount | 97.2 | 95.8 | 72 |
+| **all fields** | **72.8** | **71.2** | |
+| values marked ✓ that were correct | 90.5 (of 485) | 91.9 (of 434) | |
 <!-- zugferd:end -->
 
 **Synthetic European invoices** — the test split of [EuroDocBench](https://huggingface.co/datasets/sinceaihq/eurodocbench)
@@ -119,12 +119,12 @@ XML, which serves as the exact answer; DocToSheet was made to ignore the XML and
 <!-- edb:start -->
 | | text PDFs | simulated scans (OCR) | previous best on the scans |
 |---|---|---|---|
-| fields correct | 95.7 | — | 67.3 (EasyOCR → Qwen2.5-1.5B) |
-| invoices with all 12 fields correct | 75.6 | — | 4.3 |
-| values marked ✓ that were correct | 100.0 | — | — |
-| line items: invoices with the right number of rows | 97.4 | — | — |
-| line items: amounts correct | 97.1 | — | — |
-| seconds per invoice (one process) | 0.155 | — | — |
+| fields correct | 95.7 | 88.5 | 67.3 (EasyOCR → Qwen2.5-1.5B) |
+| invoices with all 12 fields correct | 75.6 | 37.6 | 4.3 |
+| values marked ✓ that were correct | 100.0 | 98.2 | — |
+| line items: invoices with the right number of rows | 97.4 | 75.4 | — |
+| line items: amounts correct | 97.1 | 74.9 | — |
+| seconds per invoice (one process) | 0.155 | 4.771 | — |
 <!-- edb:end -->
 
 What this means: amounts, dates and identifiers next to their labels are read reliably; names and invoice numbers on

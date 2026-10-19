@@ -1,0 +1,89 @@
+{
+ "split": "dev",
+ "track": "ocr",
+ "documents": 32,
+ "producers": [
+  "Mustangproject",
+  "intarsys"
+ ],
+ "field_accuracy": 0.9103,
+ "per_field": {
+  "invoice_number": {
+   "accuracy": 0.8125,
+   "n": 32,
+   "extra_when_gold_missing": 0
+  },
+  "issue_date": {
+   "accuracy": 0.7812,
+   "n": 32,
+   "extra_when_gold_missing": 0
+  },
+  "due_date": {
+   "accuracy": 0.9091,
+   "n": 11,
+   "extra_when_gold_missing": 8
+  },
+  "currency": {
+   "accuracy": 1.0,
+   "n": 32,
+   "extra_when_gold_missing": 0
+  },
+  "seller_name": {
+   "accuracy": 0.875,
+   "n": 32,
+   "extra_when_gold_missing": 0
+  },
+  "seller_vat_id": {
+   "accuracy": 0.9355,
+   "n": 31,
+   "extra_when_gold_missing": 1
+  },
+  "buyer_name": {
+   "accuracy": 0.9062,
+   "n": 32,
+   "extra_when_gold_missing": 0
+  },
+  "buyer_vat_id": {
+   "accuracy": 0.75,
+   "n": 4,
+   "extra_when_gold_missing": 1
+  },
+  "iban": {
+   "accuracy": 1.0,
+   "n": 10,
+   "extra_when_gold_missing": 3
+  },
+  "net_amount": {
+   "accuracy": 1.0,
+   "n": 32,
+   "extra_when_gold_missing": 0
+  },
+  "vat_amount": {
+   "accuracy": 0.875,
+   "n": 32,
+   "extra_when_gold_missing": 0
+  },
+  "total_amount": {
+   "accuracy": 1.0,
+   "n": 32,
+   "extra_when_gold_missing": 0
+  }
+ },
+ "confidence_calibration": {
+  "high": {
+   "n": 222,
+   "correct": 0.9865
+  },
+  "medium": {
+   "n": 26,
+   "correct": 0.9615
+  },
+  "low": {
+   "n": 54,
+   "correct": 0.7407
+  }
+ },
+ "line_count_correct": 0.5938,
+ "seconds_per_document": 18.39,
+ "errors": 0
+}
