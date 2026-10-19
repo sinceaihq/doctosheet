@@ -1,0 +1,23 @@
+name: Wrong or missing value
+description: DocToSheet read an invoice or receipt wrongly
+labels: [extraction]
+body:
+  - type: markdown
+    attributes:
+      value: "**Do not attach real invoices.** Replace names, addresses, account numbers and amounts if they are private, or describe the layout."
+  - type: input
+    id: field
+    attributes: { label: Which value, placeholder: e.g. total amount, invoice number, line items }
+    validations: { required: true }
+  - type: dropdown
+    id: source
+    attributes:
+      label: How was the document read? (shown above the fields)
+      options: [e-invoice data (xml), PDF text, OCR (scan or photo)]
+  - type: textarea
+    id: details
+    attributes: { label: What was printed, and what DocToSheet showed }
+    validations: { required: true }
+  - type: input
+    id: lang
+    attributes: { label: Language / country of the invoice }

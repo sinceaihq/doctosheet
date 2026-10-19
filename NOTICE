@@ -1,0 +1,19 @@
+DocToSheet
+Copyright 2026 Since AI ry
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Python dependencies (installed separately, not bundled):
+- pdfplumber and pdfminer.six (MIT), pypdfium2 (Apache-2.0 / BSD-3-Clause, PDFium BSD-3-Clause),
+  pypdf (BSD-3-Clause), openpyxl (MIT), python-stdnum (LGPL-2.1-or-later, used as a library),
+  defusedxml (PSF-2.0), lxml (BSD-3-Clause), Pillow (MIT-CMU), FastAPI and Starlette (MIT/BSD-3-Clause),
+  uvicorn (BSD-3-Clause), python-multipart (Apache-2.0).
+- Optional OCR: RapidOCR (Apache-2.0) with PaddleOCR models (Apache-2.0), ONNX Runtime (MIT).
+
+Bundled in the review app (src/doctosheet/static):
+- pdf.js / pdfjs-dist 6.3.289 (Apache-2.0), Mozilla Foundation.
+
+The web demo additionally loads Pyodide (MPL-2.0) from the jsDelivr CDN.
+
+Evaluation only (not distributed): the ZUGFeRD corpus (https://github.com/ZUGFeRD/corpus, Apache-2.0) and
+EuroDocBench (CC BY 4.0).

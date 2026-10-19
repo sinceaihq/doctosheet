@@ -92,3 +92,5 @@ button.icon { padding: 2px 8px; }
   /* The three panes scroll on their own; the window never does. */
   body { overflow: hidden; }
 }
+.samples { display: grid; gap: 6px; font-size: 13px; }
+.samples button { text-align: left; font-size: 13px; }

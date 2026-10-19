@@ -59,7 +59,9 @@ def _needs_review(doc: dict[str, Any]) -> str:
 
 def rows(docs: list[dict[str, Any]]) -> tuple[list[list[Any]], list[list[Any]], list[list[Any]]]:
     """(invoice rows, line item rows, VAT rows), each with a header row first."""
-    invoices: list[list[Any]] = [["File", *[FIELD_LABELS[k] for k in HEADER_FIELDS], "Read from", "Needs review"]]
+    invoices: list[list[Any]] = [
+        ["File", *[FIELD_LABELS[k] for k in HEADER_FIELDS], "Read from", "Needs review"]
+    ]
     lines: list[list[Any]] = [["File", "Invoice number", *[LINE_LABELS[c] for c in LINE_COLUMNS]]]
     vat: list[list[Any]] = [["File", "Invoice number", "VAT %", "Taxable amount", "VAT"]]
     for doc in docs:

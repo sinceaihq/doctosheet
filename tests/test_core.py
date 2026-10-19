@@ -149,3 +149,15 @@ def test_export_types_and_formula_injection() -> None:
     assert "'=HYPERLINK" in csv_text and ";=HYPERLINK" not in csv_text and ';"=HYPERLINK' not in csv_text
     assert "1568,75" in csv_text
     assert "1568.75" in to_csv([r], "invoices", "standard")
+
+
+def test_receipt_photo_with_ocr() -> None:
+    pytest.importorskip("rapidocr")
+    r = extract((SAMPLES / "receipt-fi.png").read_bytes(), "receipt-fi.png")
+    v = {k: f.value for k, f in r.fields.items()}
+    assert r.method == "ocr"
+    assert v["invoice_number"] == "88123" and v["issue_date"] == "2026-03-12"
+    assert v["total_amount"] == "17.90" and v["vat_amount"] == "2.20"
+    # the net amount is not printed on the receipt: suggested, not filled in
+    assert r.fields["net_amount"].computed and r.value("net_amount") is None
+    assert [li.amount.value for li in r.lines] == ["8.40", "3.50", "6.00"]

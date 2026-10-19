@@ -9,7 +9,7 @@ from .checks import run_checks
 from .fields import Doc, extract_fields
 from .layout import Word, group_lines
 from .lines import extract_lines
-from .model import HEADER_FIELDS, Field, Page, Result, Source
+from .model import FIELD_LABELS, HEADER_FIELDS, Field, Page, Result, Source
 from .pdf import PdfError, read_pdf, render_pages
 
 MAX_BYTES = 25 * 1024 * 1024
@@ -113,5 +113,5 @@ def _result(file_name, kind, pages, method, fmt, fields, items, vat_rows, warnin
     checks = run_checks(complete, items, vat_rows)
     missing = [k for k in HEADER_FIELDS if complete[k].value is None]
     if missing:
-        warnings.append("Not found: " + ", ".join(m.replace("_", " ") for m in missing) + ".")
+        warnings.append("Not found on this document: " + ", ".join(FIELD_LABELS[m] for m in missing) + ".")
     return Result(file_name, kind, pages, method, fmt, complete, items, vat_rows, checks, warnings)

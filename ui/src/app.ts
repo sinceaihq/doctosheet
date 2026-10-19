@@ -1,11 +1,8 @@
 // DocToSheet review app. Talks only to the local server that served it.
 
 import { FIELD_LABELS, LINE_COLUMNS, type Doc, type Field, type LineItem, type Result } from "./types";
+import { api, hasToken, isLite } from "./api";
 import { scrollWithin, Viewer, type Marker } from "./viewer";
-
-const token = new URLSearchParams(location.hash.slice(1)).get("token") ?? "";
-// Keep the token out of the visible address and history.
-if (token) history.replaceState(null, "", location.pathname);
 
 const h = <K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -20,20 +17,6 @@ const h = <K extends keyof HTMLElementTagNameMap>(
   el.append(...children);
   return el;
 };
-
-async function api(path: string, init: RequestInit = {}): Promise<Response> {
-  const res = await fetch(path, { ...init, headers: { ...(init.headers ?? {}), "X-DocToSheet-Token": token } });
-  if (!res.ok) {
-    let detail = res.statusText;
-    try {
-      detail = ((await res.json()) as { detail?: string }).detail ?? detail;
-    } catch {
-      /* not JSON */
-    }
-    throw new Error(detail);
-  }
-  return res;
-}
 
 const docs: Doc[] = [];
 let current: Doc | null = null;
@@ -332,7 +315,11 @@ document.getElementById("app")!.replaceChildren(
   ),
   h("main", { class: "layout" }, h("aside", { class: "side" }, drop, docList), viewer.root, panel),
 );
-viewer.clear("Your documents stay on this computer. Nothing is uploaded to the internet.");
+viewer.clear(
+  isLite()
+    ? "Web demo: everything runs in this page. Nothing is uploaded. Python is loading in the background…"
+    : "Your documents stay on this computer. Nothing is uploaded to the internet.",
+);
 panel.replaceChildren(
   h("h2", {}, "How it works"),
   h(
@@ -344,4 +331,31 @@ panel.replaceChildren(
   ),
   h("p", { class: "muted" }, "Amounts are never guessed: if a total is not printed, DocToSheet suggests one and you decide."),
 );
-if (!token) panel.prepend(h("p", { class: "error" }, "Open DocToSheet with the address printed by “doctosheet serve” (it contains an access token)."));
+if (isLite()) {
+  const samples: [string, string][] = [
+    ["Finnish invoice (PDF)", "samples/invoice-fi.pdf"],
+    ["German ZUGFeRD e-invoice (PDF with XML)", "samples/invoice-de-zugferd.pdf"],
+    ["Dutch Peppol e-invoice (XML)", "samples/invoice-nl-peppol.xml"],
+  ];
+  const buttons = samples.map(([label, url]) => {
+    const b = h("button", { type: "button" }, label);
+    b.addEventListener("click", async () => {
+      const blob = await (await fetch(url)).blob();
+      void addFiles([new File([blob], url.split("/").pop()!, { type: blob.type })]);
+    });
+    return b;
+  });
+  // In the sidebar, so the samples stay available after a document is opened.
+  drop.after(
+    h(
+      "div",
+      { class: "samples" },
+      h("strong", {}, "Try a sample (synthetic)"),
+      ...buttons,
+      h("small", { class: "muted" }, "This web demo reads e-invoice XML and PDFs with a text layer. Scans and photos (OCR) need the installed app."),
+    ),
+  );
+}
+if (!hasToken && !isLite()) {
+  panel.prepend(h("p", { class: "error" }, "Open DocToSheet with the address printed by “doctosheet serve” (it contains an access token)."));
+}
