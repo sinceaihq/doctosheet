@@ -50,17 +50,21 @@ class Line:
 
     def span_box(self, start: int, end: int) -> Box | None:
         """Box covering the words that overlap characters [start, end)."""
-        return Box.union([w.box for w, (s, e) in zip(self.words, self.spans) if s < end and e > start])
+        return Box.union(
+            [w.box for w, (s, e) in zip(self.words, self.spans, strict=True) if s < end and e > start]
+        )
 
     def span_confidence(self, start: int, end: int) -> float:
-        confs = [w.confidence for w, (s, e) in zip(self.words, self.spans) if s < end and e > start]
+        confs = [
+            w.confidence for w, (s, e) in zip(self.words, self.spans, strict=True) if s < end and e > start
+        ]
         return min(confs) if confs else 1.0
 
     def words_in(self, x0: float, x1: float) -> list[tuple[Word, tuple[int, int]]]:
         """Words whose horizontal centre lies in [x0, x1)."""
         return [
             (w, sp)
-            for w, sp in zip(self.words, self.spans)
+            for w, sp in zip(self.words, self.spans, strict=True)
             if x0 <= (w.box.x0 + w.box.x1) / 2 < x1
         ]
 

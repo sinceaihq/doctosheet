@@ -98,12 +98,14 @@ def create_app(token: str, port: int = 0) -> FastAPI:
     def original(file_id: str) -> Response:
         if file_id not in files:
             raise HTTPException(404)
-        name, data, _ = files[file_id]
+        _name, data, _ = files[file_id]
         kind = "application/pdf" if data[:4] == b"%PDF" else "application/octet-stream"
         return Response(data, media_type=kind)
 
     @app.post("/api/export")
-    async def export(request: Request, format: str = "xlsx", table: str = "invoices", dialect: str = "standard") -> Response:
+    async def export(
+        request: Request, format: str = "xlsx", table: str = "invoices", dialect: str = "standard"
+    ) -> Response:
         body = await request.json()
         docs = body.get("documents", [])
         if not isinstance(docs, list) or not docs:

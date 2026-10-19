@@ -16,10 +16,12 @@ def norm(text: str) -> str:
     """Case-folded, without diacritics, separators as spaces."""
     t = unicodedata.normalize("NFKD", text.casefold())
     t = "".join(c for c in t if not unicodedata.combining(c))
-    return re.sub(r"[_\-–]+", " ", t).replace("ł", "l").replace("ø", "o").replace("æ", "ae").replace("ß", "ss")
+    return (
+        re.sub(r"[_\-–]+", " ", t).replace("ł", "l").replace("ø", "o").replace("æ", "ae").replace("ß", "ss")
+    )
 
 
-INVOICE_NUMBER = (
+INVOICE_NUMBER: tuple[str, ...] = (
     "invoice no", "invoice number", "invoice nr", "invoice #", "invoice id", "inv no", "bill no", "receipt no",
     "laskun numero", "laskunumero", "laskun nro", "laskunro", "lasku nro", "kuitin numero",
     "fakturanummer", "fakturanr", "faktura nr", "fakturanummer", "kvittonummer",
@@ -35,6 +37,27 @@ INVOICE_NUMBER = (
     "szamla sorszama", "szamlaszam", "numar factura", "nr factura", "arve number", "arve nr",
     "saskaitos numeris", "rekina numurs", "racun st", "broj racuna", "cislo faktury",
 )  # fmt: skip
+_NUMBER_WORDS = ("nr", "no", "n", "nro", "num", "nummer", "number", "numero", "#", "c", "cislo")
+_TITLES_FOR_NUMBER = ("invoice", "tax invoice", "credit note", "receipt", "rechnung", "handelsrechnung", "gutschrift",
+                      "lasku", "faktura", "facture", "factuur", "fattura", "factura", "fatura", "kvitto", "quittung")  # fmt: skip
+INVOICE_NUMBER = INVOICE_NUMBER + tuple(f"{t} {n}" for t in _TITLES_FOR_NUMBER for n in _NUMBER_WORDS)
+# Issue date written after the invoice number: "Rechnung Nr. 471102 vom 05.03.2018".
+ISSUED_ON = (
+    "vom",
+    "du",
+    "del",
+    "dated",
+    "issued at",
+    "issued on",
+    "issued",
+    "from",
+    "date",
+    "of",
+    "den",
+    "dne",
+    "z dnia",
+)
+
 ISSUE_DATE = (
     "invoice date", "date of issue", "issue date", "issued", "date", "billing date", "receipt date",
     "laskun paivamaara", "laskun pvm", "paivays", "paivamaara", "pvm",
@@ -54,7 +77,9 @@ DUE_DATE = (
     "vencimiento", "fecha limite de pago", "termin platnosci", "termin zaplaty", "zaplata do",
     "data de vencimento", "vencimento", "pagar ate", "datum splatnosti", "splatnost", "splatne do",
     "forfaldsdato", "forfald", "betalingsfrist", "betales senest", "fizetesi hatarido",
-    "data scadentei", "maksetahtaeg", "tahtaeg",
+    "data scadentei", "maksetahtaeg", "tahtaeg", "falligkeit", "fallig bis", "netto bis", "zahlbar innerhalb",
+    "remit until", "pay until", "payable until", "please pay by", "please remit", "payment due by", "due by",
+    "a regler avant", "payable avant", "te voldoen voor", "betalen voor", "pagare entro", "pagar antes de",
 )  # fmt: skip
 NET = (
     "subtotal", "sub total", "net amount", "net total", "total net", "total excl", "total excluding vat",
@@ -66,13 +91,20 @@ NET = (
     "subtotal sin iva", "razem netto", "wartosc netto", "suma netto", "netto razem",
     "total sem iva", "valor liquido", "base tributavel", "zaklad dane", "celkem bez dph",
     "beløb ekskl", "belob ekskl", "ekskl moms", "netto belob", "nettobelop", "sum eks mva",
-    "netto osszeg", "valoare fara tva", "summa kaibemaksuta",
+    "netto osszeg", "valoare fara tva", "summa kaibemaksuta", "ohne ust", "ohne mwst", "rechnungssumme ohne",
+    "summe ohne", "positionssumme", "warenwert", "total before vat", "total without vat", "amount before tax",
+    "net total", "total net amount",
 )  # fmt: skip
 VAT = (
     "vat", "value added tax", "tax", "sales tax", "alv", "arvonlisavero", "moms", "mervardesskatt",
     "mwst", "ust", "umsatzsteuer", "mehrwertsteuer", "tva", "btw", "iva", "imposta",
     "dph", "podatek vat", "kwota vat", "vat kwota", "mva", "afa", "kaibemaks", "pvm", "pvn", "ddv", "pdv",
+    "steuerbetrag", "umsatzsteuerbetrag", "mwst betrag", "ust betrag", "vat amount", "tax amount", "montant tva",
 )  # fmt: skip
+# "VAT total", "Summe USt": a VAT line, unless it says the amount includes VAT.
+INCLUDING = ("incl", "including", "inkl", "inklusive", "inc vat", "with vat", "ttc", "brutto", "gross", "sis alv",
+             "sisaltaen alv", "inkl moms", "med moms", "med mva", "incl btw", "met btw", "mit mwst", "mit ust",
+             "com iva", "con iva", "iva incluida", "iva inclusa", "avec tva", "z vat", "s dph", "vcetne dph")  # fmt: skip
 TOTAL = (
     "amount due", "total due", "balance due", "grand total", "total amount", "invoice total", "total",
     "to pay", "amount payable", "total incl", "total including vat",
@@ -83,7 +115,8 @@ TOTAL = (
     "total factura", "total a pagar", "importe total", "do zaplaty", "razem brutto", "wartosc brutto",
     "suma brutto", "total com iva", "valor total", "total a pagar", "celkem k uhrade", "k uhrade",
     "celkem", "i alt", "i alt at betale", "at betale", "a betale", "totalt a betale",
-    "fizetendo", "osszesen", "total de plata", "kokku", "tasuda",
+    "fizetendo", "osszesen", "total de plata", "kokku", "tasuda", "bruttosumme", "bruttobetrag", "brutto",
+    "due payable", "payable", "total payable", "amount to pay", "zu zahlender betrag", "gesamtsumme brutto",
 )  # fmt: skip
 SELLER = (
     "seller", "supplier", "vendor", "from", "billed by", "issued by", "payee",
@@ -98,7 +131,8 @@ BUYER = (
     "kunde", "rechnungsempfanger", "rechnungsadresse", "auftraggeber", "facture a", "client",
     "destinataire", "adresse de facturation", "klant", "factuuradres", "afnemer",
     "cliente", "cessionario", "committente", "destinatario", "facturar a", "comprador",
-    "nabywca", "odbiorca", "platnik", "adquirente", "odberatel", "kupujici", "kobenhavn",
+    "nabywca", "odbiorca", "platnik", "adquirente", "odberatel", "kupujici", "kaufer", "leistungsempfanger",
+    "invoice address", "billing address", "ship to", "bill to address",
     "kunde", "faktureres til", "modtager", "vevo", "cumparator",
 )  # fmt: skip
 IBAN = ("iban", "account", "bank account", "tilinumero", "tili", "konto", "kontonummer", "bankverbindung",
@@ -119,7 +153,8 @@ LEGAL_FORMS = ("oy", "oyj", "ay", "ky", "ab", "hb", "kb", "gmbh", "ag", "kg", "o
                "sa", "sasu", "eurl", "bv", "b v", "nv", "n v", "vof", "srl", "s r l", "spa", "s p a", "snc",
                "sl", "s l", "sa", "slu", "sp z o o", "spolka z o o", "s a", "lda", "unipessoal lda", "sro", "s r o",
                "as", "a s", "aps", "a s", "asa", "ltd", "limited", "plc", "llp", "llc", "inc", "dac", "kft", "zrt",
-               "ou", "as", "uab", "sia", "d o o", "doo", "ad", "eood", "ood")  # fmt: skip
+               "ou", "as", "uab", "sia", "d o o", "doo", "ad", "eood", "ood", "a g", "ev", "e v", "eg", "e g", "gbr",
+               "se", "kgaa", "partg", "mbb", "co kg", "co", "eurl", "sci", "scop", "cooperatie", "stiftung")  # fmt: skip
 
 # Line item table columns.
 COLUMNS: dict[str, tuple[str, ...]] = {
@@ -170,3 +205,12 @@ def phrase_regex(words: tuple[str, ...]) -> re.Pattern[str]:
         for w in sorted(set(words), key=len, reverse=True)
     )
     return re.compile(rf"(?<![a-z0-9])(?:{alternatives})(?![a-z0-9])")
+
+
+# Totals that mean "amount still to pay" (may exclude prepayments) vs the gross invoice total.
+TOTAL_DUE = ("amount due", "total due", "balance due", "due payable", "to pay", "amount payable", "zahlbetrag",
+             "zu zahlen", "zu zahlender betrag", "noch zu zahlen", "restbetrag", "net a payer", "reste a payer",
+             "maksettava", "att betala", "te betalen", "do zaplaty", "k uhrade", "at betale", "a pagar", "da pagare")  # fmt: skip
+TOTAL_GROSS = ("grand total", "total amount", "invoice total", "rechnungsbetrag", "bruttosumme", "gesamtbetrag",
+               "rechnungssumme", "endbetrag", "total ttc", "montant ttc", "totaalbedrag", "importo totale",
+               "total factura", "razem brutto", "total com iva", "yhteensa", "summa", "totalt", "celkem")  # fmt: skip

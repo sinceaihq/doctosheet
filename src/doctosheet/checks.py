@@ -7,6 +7,7 @@ that the user has to accept explicitly.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import Decimal
 
 from .model import Check, Field, LineItem, VatRow
@@ -28,7 +29,7 @@ def _close(a: Decimal, b: Decimal) -> bool:
     return abs(a - b) <= TOLERANCE
 
 
-def _confirm(fields: list[Field | None], note: str) -> None:
+def _confirm(fields: Sequence[Field | None], note: str) -> None:
     for f in fields:
         if f is not None and f.value is not None:
             f.evidence.append(note)
@@ -36,7 +37,7 @@ def _confirm(fields: list[Field | None], note: str) -> None:
                 f.confidence = "high"
 
 
-def _doubt(fields: list[Field | None], note: str) -> None:
+def _doubt(fields: Sequence[Field | None], note: str) -> None:
     for f in fields:
         if f is not None and f.value is not None:
             f.evidence.append(note)
@@ -58,7 +59,9 @@ def run_checks(fields: dict[str, Field], lines: list[LineItem], vat_rows: list[V
     else:
         checks.append(Check("net + VAT = total", "not_applicable", "not all three amounts were found"))
         # Offer, never fill: a computed value is a suggestion the user must accept.
-        missing = [k for k, v in (("net_amount", net), ("vat_amount", vat), ("total_amount", total)) if v is None]
+        missing = [
+            k for k, v in (("net_amount", net), ("vat_amount", vat), ("total_amount", total)) if v is None
+        ]
         if len(missing) == 1:
             k = missing[0]
             value = (
@@ -106,7 +109,9 @@ def run_checks(fields: dict[str, Field], lines: list[LineItem], vat_rows: list[V
     issue, due = fields.get("issue_date"), fields.get("due_date")
     if issue and due and issue.value and due.value:
         ok = due.value >= issue.value
-        checks.append(Check("due date after invoice date", "ok" if ok else "failed", f"{issue.value} → {due.value}"))
+        checks.append(
+            Check("due date after invoice date", "ok" if ok else "failed", f"{issue.value} → {due.value}")
+        )
         if not ok:
             _doubt([issue, due], "✗ due date is before the invoice date")
 

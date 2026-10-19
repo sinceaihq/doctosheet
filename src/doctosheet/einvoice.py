@@ -39,7 +39,7 @@ def _find(el: Element | None, path: str) -> Element | None:
         return None
     current: list[Element] = [el]
     for part in path.split("/"):
-        nxt = []
+        nxt: list[Element] = []
         for c in current:
             nxt.extend(ch for ch in c if part == "*" or _local(ch.tag) == part)
         if not nxt:
@@ -154,7 +154,8 @@ def _cii(root: Element) -> tuple[dict[str, Field], list[LineItem], list[VatRow]]
         "invoice_number": _xml_field(_text(doc, "ID"), "ExchangedDocument/ID"),
         "issue_date": _xml_field(_date(_text(doc, "IssueDateTime/DateTimeString")), "IssueDateTime"),
         "due_date": _xml_field(
-            _date(_text(settlement, "SpecifiedTradePaymentTerms/DueDateDateTime/DateTimeString")), "DueDateDateTime"
+            _date(_text(settlement, "SpecifiedTradePaymentTerms/DueDateDateTime/DateTimeString")),
+            "DueDateDateTime",
         ),
         "currency": _xml_field(_text(settlement, "InvoiceCurrencyCode"), "InvoiceCurrencyCode"),
         "seller_name": _xml_field(_text(seller, "Name"), "SellerTradeParty/Name"),
@@ -162,7 +163,12 @@ def _cii(root: Element) -> tuple[dict[str, Field], list[LineItem], list[VatRow]]
         "buyer_name": _xml_field(_text(buyer, "Name"), "BuyerTradeParty/Name"),
         "buyer_vat_id": _xml_field(_vat_id(party_vat(buyer)), "BuyerTradeParty/SpecifiedTaxRegistration"),
         "iban": _xml_field(
-            _iban(_text(settlement, "SpecifiedTradeSettlementPaymentMeans/PayeePartyCreditorFinancialAccount/IBANID")),
+            _iban(
+                _text(
+                    settlement,
+                    "SpecifiedTradeSettlementPaymentMeans/PayeePartyCreditorFinancialAccount/IBANID",
+                )
+            ),
             "PayeePartyCreditorFinancialAccount/IBANID",
         ),
         "net_amount": _xml_field(_amount(_text(summ, "TaxBasisTotalAmount")), "TaxBasisTotalAmount"),
@@ -171,11 +177,15 @@ def _cii(root: Element) -> tuple[dict[str, Field], list[LineItem], list[VatRow]]
     }
     breakdown = [
         VatRow(
-            _xml_field(_number(_text(t, "RateApplicablePercent")), "ApplicableTradeTax/RateApplicablePercent"),
+            _xml_field(
+                _number(_text(t, "RateApplicablePercent")), "ApplicableTradeTax/RateApplicablePercent"
+            ),
             _xml_field(_amount(_text(t, "BasisAmount")), "ApplicableTradeTax/BasisAmount"),
             _xml_field(_amount(_text(t, "CalculatedAmount")), "ApplicableTradeTax/CalculatedAmount"),
         )
-        for t in ([] if settlement is None else [x for x in settlement if _local(x.tag) == "ApplicableTradeTax"])
+        for t in (
+            [] if settlement is None else [x for x in settlement if _local(x.tag) == "ApplicableTradeTax"]
+        )
     ]
     items = []
     for li in _findall(trade, "IncludedSupplyChainTradeLineItem"):
@@ -184,18 +194,25 @@ def _cii(root: Element) -> tuple[dict[str, Field], list[LineItem], list[VatRow]]
             LineItem(
                 _xml_field(_text(li, "SpecifiedTradeProduct/Name"), "SpecifiedTradeProduct/Name"),
                 _xml_field(_number(_text(qty_el)), "BilledQuantity"),
-                _xml_field(qty_el.get("unitCode") if qty_el is not None else None, "BilledQuantity/@unitCode"),
+                _xml_field(
+                    qty_el.get("unitCode") if qty_el is not None else None, "BilledQuantity/@unitCode"
+                ),
                 _xml_field(
                     _amount(_text(li, "SpecifiedLineTradeAgreement/NetPriceProductTradePrice/ChargeAmount")),
                     "NetPriceProductTradePrice",
                 ),
                 _xml_field(
-                    _number(_text(li, "SpecifiedLineTradeSettlement/ApplicableTradeTax/RateApplicablePercent")),
+                    _number(
+                        _text(li, "SpecifiedLineTradeSettlement/ApplicableTradeTax/RateApplicablePercent")
+                    ),
                     "RateApplicablePercent",
                 ),
                 _xml_field(
                     _amount(
-                        _text(li, "SpecifiedLineTradeSettlement/SpecifiedTradeSettlementLineMonetarySummation/LineTotalAmount")
+                        _text(
+                            li,
+                            "SpecifiedLineTradeSettlement/SpecifiedTradeSettlementLineMonetarySummation/LineTotalAmount",
+                        )
                     ),
                     "LineTotalAmount",
                 ),
@@ -237,7 +254,9 @@ def _ubl(root: Element) -> tuple[dict[str, Field], list[LineItem], list[VatRow]]
         "seller_vat_id": _xml_field(_vat_id(vat(seller)), "AccountingSupplierParty/PartyTaxScheme"),
         "buyer_name": _xml_field(name(buyer), "AccountingCustomerParty"),
         "buyer_vat_id": _xml_field(_vat_id(vat(buyer)), "AccountingCustomerParty/PartyTaxScheme"),
-        "iban": _xml_field(_iban(_text(root, "PaymentMeans/PayeeFinancialAccount/ID")), "PayeeFinancialAccount/ID"),
+        "iban": _xml_field(
+            _iban(_text(root, "PaymentMeans/PayeeFinancialAccount/ID")), "PayeeFinancialAccount/ID"
+        ),
         "net_amount": _xml_field(_amount(_text(totals, "TaxExclusiveAmount")), "TaxExclusiveAmount"),
         "vat_amount": _xml_field(_amount(tax_amount), "TaxTotal/TaxAmount"),
         "total_amount": _xml_field(_amount(_text(totals, "TaxInclusiveAmount")), "TaxInclusiveAmount"),
@@ -259,9 +278,14 @@ def _ubl(root: Element) -> tuple[dict[str, Field], list[LineItem], list[VatRow]]
             LineItem(
                 _xml_field(_text(line, "Item/Name") or _text(line, "Item/Description"), "Item/Name"),
                 _xml_field(_number(_text(qty_el)), "InvoicedQuantity"),
-                _xml_field(qty_el.get("unitCode") if qty_el is not None else None, "InvoicedQuantity/@unitCode"),
+                _xml_field(
+                    qty_el.get("unitCode") if qty_el is not None else None, "InvoicedQuantity/@unitCode"
+                ),
                 _xml_field(_amount(_text(line, "Price/PriceAmount")), "Price/PriceAmount"),
-                _xml_field(_number(_text(line, "Item/ClassifiedTaxCategory/Percent")), "ClassifiedTaxCategory/Percent"),
+                _xml_field(
+                    _number(_text(line, "Item/ClassifiedTaxCategory/Percent")),
+                    "ClassifiedTaxCategory/Percent",
+                ),
                 _xml_field(_amount(_text(line, "LineExtensionAmount")), "LineExtensionAmount"),
             )
         )
@@ -277,17 +301,27 @@ def _finvoice(root: Element) -> tuple[dict[str, Field], list[LineItem], list[Vat
         "invoice_number": _xml_field(_text(details, "InvoiceNumber"), "InvoiceNumber"),
         "issue_date": _xml_field(_date(_text(details, "InvoiceDate")), "InvoiceDate"),
         "due_date": _xml_field(_date(_text(details, "PaymentTermsDetails/InvoiceDueDate")), "InvoiceDueDate"),
-        "currency": _xml_field(total_excl.get("AmountCurrencyIdentifier") if total_excl is not None else None,
-                               "AmountCurrencyIdentifier"),  # fmt: skip
+        "currency": _xml_field(
+            total_excl.get("AmountCurrencyIdentifier") if total_excl is not None else None,
+            "AmountCurrencyIdentifier",
+        ),
         "seller_name": _xml_field(_text(seller, "SellerOrganisationName"), "SellerOrganisationName"),
-        "seller_vat_id": _xml_field(_vat_id(_text(seller, "SellerOrganisationTaxCode")), "SellerOrganisationTaxCode"),
+        "seller_vat_id": _xml_field(
+            _vat_id(_text(seller, "SellerOrganisationTaxCode")), "SellerOrganisationTaxCode"
+        ),
         "buyer_name": _xml_field(_text(buyer, "BuyerOrganisationName"), "BuyerOrganisationName"),
-        "buyer_vat_id": _xml_field(_vat_id(_text(buyer, "BuyerOrganisationTaxCode")), "BuyerOrganisationTaxCode"),
-        "iban": _xml_field(_iban(_text(root, "SellerInformationDetails/SellerAccountDetails/SellerAccountID")),
-                           "SellerAccountID"),  # fmt: skip
+        "buyer_vat_id": _xml_field(
+            _vat_id(_text(buyer, "BuyerOrganisationTaxCode")), "BuyerOrganisationTaxCode"
+        ),
+        "iban": _xml_field(
+            _iban(_text(root, "SellerInformationDetails/SellerAccountDetails/SellerAccountID")),
+            "SellerAccountID",
+        ),
         "net_amount": _xml_field(_amount(_text(total_excl)), "InvoiceTotalVatExcludedAmount"),
         "vat_amount": _xml_field(_amount(_text(details, "InvoiceTotalVatAmount")), "InvoiceTotalVatAmount"),
-        "total_amount": _xml_field(_amount(_text(details, "InvoiceTotalVatIncludedAmount")), "InvoiceTotalVatIncludedAmount"),
+        "total_amount": _xml_field(
+            _amount(_text(details, "InvoiceTotalVatIncludedAmount")), "InvoiceTotalVatIncludedAmount"
+        ),
     }
     breakdown = [
         VatRow(
@@ -299,16 +333,19 @@ def _finvoice(root: Element) -> tuple[dict[str, Field], list[LineItem], list[Vat
     ]
     items = []
     for row in _findall(root, "InvoiceRow"):
-        qty_el = _first(_find(row, "DeliveredQuantity"), _find(row, "InvoicedQuantity"), _find(row, "OrderedQuantity"))
+        qty_el = _first(
+            _find(row, "DeliveredQuantity"), _find(row, "InvoicedQuantity"), _find(row, "OrderedQuantity")
+        )
         items.append(
             LineItem(
                 _xml_field(_text(row, "ArticleName"), "ArticleName"),
                 _xml_field(_number(_text(qty_el)), "DeliveredQuantity"),
-                _xml_field(qty_el.get("QuantityUnitCode") if qty_el is not None else None, "QuantityUnitCode"),
+                _xml_field(
+                    qty_el.get("QuantityUnitCode") if qty_el is not None else None, "QuantityUnitCode"
+                ),
                 _xml_field(_amount(_text(row, "UnitPriceAmount")), "UnitPriceAmount"),
                 _xml_field(_number(_text(row, "RowVatRatePercent")), "RowVatRatePercent"),
                 _xml_field(_amount(_text(row, "RowVatExcludedAmount")), "RowVatExcludedAmount"),
             )
         )
     return fields, items, breakdown
-

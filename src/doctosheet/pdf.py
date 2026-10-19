@@ -86,9 +86,8 @@ def embedded_files(data: bytes) -> tuple[str, bytes] | None:
     except Exception:
         return None
     for name, contents in attachments.items():
-        if name.lower() in EMBEDDED_XML_NAMES or name.lower().endswith(".xml"):
-            if contents:
-                return name, contents[0]
+        if (name.lower() in EMBEDDED_XML_NAMES or name.lower().endswith(".xml")) and contents:
+            return name, contents[0]
     return None
 
 

@@ -73,8 +73,10 @@ def parse_amount(token: str) -> Decimal | None:
 
 
 def amounts_in(text: str) -> list[tuple[int, int, Decimal]]:
-    """(start, end, value) of every amount, ignoring percentages."""
+    """(start, end, value) of every amount, ignoring percentages and dates ("04.04.2018")."""
     masked = PERCENT_RE.sub(lambda m: " " * len(m.group(0)), text)
+    for s, e, _ in dates_in(masked):
+        masked = masked[:s] + " " * (e - s) + masked[e:]
     out = []
     for m in AMOUNT_RE.finditer(masked):
         value = parse_amount(m.group(0))

@@ -59,15 +59,19 @@ def _needs_review(doc: dict[str, Any]) -> str:
 
 def rows(docs: list[dict[str, Any]]) -> tuple[list[list[Any]], list[list[Any]], list[list[Any]]]:
     """(invoice rows, line item rows, VAT rows), each with a header row first."""
-    invoices = [["File", *[FIELD_LABELS[k] for k in HEADER_FIELDS], "Read from", "Needs review"]]
-    lines = [["File", "Invoice number", *[LINE_LABELS[c] for c in LINE_COLUMNS]]]
-    vat = [["File", "Invoice number", "VAT %", "Taxable amount", "VAT"]]
+    invoices: list[list[Any]] = [["File", *[FIELD_LABELS[k] for k in HEADER_FIELDS], "Read from", "Needs review"]]
+    lines: list[list[Any]] = [["File", "Invoice number", *[LINE_LABELS[c] for c in LINE_COLUMNS]]]
+    vat: list[list[Any]] = [["File", "Invoice number", "VAT %", "Taxable amount", "VAT"]]
     for doc in docs:
         f = doc["fields"]
         number = _value(f.get("invoice_number"))
         invoices.append(
-            [doc["file_name"], *[_typed(k, _value(f.get(k))) for k in HEADER_FIELDS], doc.get("method"),
-             _needs_review(doc)]  # fmt: skip
+            [
+                doc["file_name"],
+                *[_typed(k, _value(f.get(k))) for k in HEADER_FIELDS],
+                doc.get("method"),
+                _needs_review(doc),
+            ]
         )
         for li in doc.get("lines", []):
             lines.append([doc["file_name"], number, *[_typed(c, _value(li.get(c))) for c in LINE_COLUMNS]])
@@ -108,7 +112,7 @@ def to_xlsx(docs: list[dict[str, Any]]) -> bytes:
     from openpyxl.utils import get_column_letter
 
     wb = Workbook()
-    sheets = zip(("Invoices", "Line items", "VAT"), rows(docs))
+    sheets = zip(("Invoices", "Line items", "VAT"), rows(docs), strict=True)
     first = True
     for title, data in sheets:
         ws = wb.active if first else wb.create_sheet()

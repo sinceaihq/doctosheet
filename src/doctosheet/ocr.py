@@ -48,7 +48,7 @@ def ocr_image(image: Any, page: int, scale: float = 1.0) -> list[Word]:
     if result.txts is None:
         return words
     word_results = getattr(result, "word_results", None)
-    for i, (box, text, score) in enumerate(zip(result.boxes, result.txts, result.scores)):
+    for i, (box, text, score) in enumerate(zip(result.boxes, result.txts, result.scores, strict=False)):
         xs = [p[0] for p in box]
         ys = [p[1] for p in box]
         parts = word_results[i] if word_results is not None and i < len(word_results) else None
@@ -69,7 +69,9 @@ def ocr_image(image: Any, page: int, scale: float = 1.0) -> list[Word]:
             continue
         for token in _split_tokens(str(text), min(xs), max(xs)):
             tok, x0, x1 = token
-            words.append(Word(tok, Box(page, x0 * scale, min(ys) * scale, x1 * scale, max(ys) * scale), float(score)))
+            words.append(
+                Word(tok, Box(page, x0 * scale, min(ys) * scale, x1 * scale, max(ys) * scale), float(score))
+            )
     return words
 
 

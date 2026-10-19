@@ -90,7 +90,12 @@ class Doc:
             # The first word under the label, extended to the end of its column (the
             # next wide gap), so that narrow labels still get long values.
             first = next(
-                (sp for w, sp in zip(nxt.words, nxt.spans) if w.box.x1 > box.x0 - 2 and w.box.x0 < box.x1 + 60), None
+                (
+                    sp
+                    for w, sp in zip(nxt.words, nxt.spans, strict=True)
+                    if w.box.x1 > box.x0 - 2 and w.box.x0 < box.x1 + 60
+                ),
+                None,
             )
             if first:
                 gap = nxt.text.find("  ", first[0])
@@ -129,7 +134,27 @@ def _candidates(doc: Doc, words: tuple[str, ...]) -> list[tuple[Label, int, int,
     return out
 
 
+# "Rechnungskorrektur Nr. RK21012345", "Baurechnung Nr. 181301674", "Credit invoice no. 12"
+TITLE_NUMBER_RE = re.compile(
+    r"(?<![^\W\d_])[\w-]*(?:rechnung|gutschrift|invoice|lasku|faktura|facture|factuur|fattura|factura|fatura)[\w-]*"
+    r"\s+(?:nr|no|nro|n°|nº|nummer|number|numero|#)\.?\s*:?\s*(\S*\d\S*)",
+    re.IGNORECASE,
+)
+
+
 def invoice_number(doc: Doc) -> Field | None:
+    for i, ln in enumerate(doc.lines):
+        m = TITLE_NUMBER_RE.search(ln.text)
+        if m and not dates_in(m.group(1)):
+            token = m.group(1).rstrip(".,;:")
+            return doc.field(
+                token,
+                i,
+                m.start(1),
+                m.start(1) + len(token),
+                [f"“{m.group(0)[: m.start(1) - m.start()].strip()}”"],
+                True,
+            )
     for lab, i, s, e in _candidates(doc, vocab.INVOICE_NUMBER):
         text = doc.lines[i].text[s:e]
         m = re.match(r"\S*\d\S*", text.strip())
@@ -167,12 +192,29 @@ def issue_and_due(doc: Doc) -> tuple[Field | None, Field | None]:
             issue = doc.field(d.isoformat(), i, s + ds, s + de, [f"label “{_label_text(doc, lab)}”"], True)
             break
     if issue is None:
+        # "Rechnung Nr. 471102 vom 05.03.2018", "Invoice # 12 issued at 2020-11-21"
+        rx = vocab.phrase_regex(vocab.ISSUED_ON)
+        for lab in doc.find(vocab.INVOICE_NUMBER):
+            text = doc.lines[lab.line].text
+            for s, e, d in dates_in(text[lab.end :]):
+                before = vocab.norm(text[lab.end : lab.end + s])
+                if rx.search(before[-14:]):
+                    issue = doc.field(d.isoformat(), lab.line, lab.end + s, lab.end + e,
+                                      ["date given with the invoice number"], True)  # fmt: skip
+                    break
+            if issue:
+                break
+    if issue is None:
         # The earliest date on the first page, without a label: a weak guess, shown as such.
-        dated = [(d, i, s, e) for i, ln in enumerate(doc.lines) if ln.page == 0 for s, e, d in dates_in(ln.text)]
+        dated = [
+            (d, i, s, e) for i, ln in enumerate(doc.lines) if ln.page == 0 for s, e, d in dates_in(ln.text)
+        ]
         dated = [x for x in dated if not (due and due.value == x[0].isoformat())]
         if dated:
             d, i, s, e = min(dated, key=lambda x: x[0])
-            issue = doc.field(d.isoformat(), i, s, e, ["earliest date on the first page (no label found)"], False)
+            issue = doc.field(
+                d.isoformat(), i, s, e, ["earliest date on the first page (no label found)"], False
+            )
             issue.confidence = "low"
     return issue, due
 
@@ -262,6 +304,12 @@ def _company_near(doc: Doc, lab: Label) -> Field | None:
     places = ([(lab.line, s, e)] if e > s else []) + doc.below(lab, max_lines=3)
     for i, a, b in places:
         sp = _company_span(doc.lines[i].text[a:b])
+        if sp is None:
+            seg = doc.lines[i].text[a:b]
+            words = set(re.sub(r"[.\s]+", " ", vocab.norm(seg)).split())
+            # Under a party label a legal form may sit mid-name ("Kunden AG Mitte").
+            if ":" not in seg and len(seg) < 60 and words & {lf for lf in vocab.LEGAL_FORMS if " " not in lf}:
+                sp = (0, len(seg.rstrip(" ,")))
         if sp:
             start, end = a + sp[0], a + sp[1]
             name = doc.lines[i].text[start:end].strip()
@@ -269,8 +317,39 @@ def _company_near(doc: Doc, lab: Label) -> Field | None:
     return None
 
 
+ADDRESS_LINE = re.compile(
+    r"\d|@|https?:|\bstr\b|stra(ss|ß)e|tie\b|katu\b|gatan\b|vej\b|weg\b|rue\b|via\b|calle\b", re.I
+)
+
+
+def _name_below(doc: Doc, lab: Label) -> Field | None:
+    """First plausible name line under a label: a person or an organisation without a legal form."""
+    for i, a, b in doc.below(lab, max_lines=3):
+        text = doc.lines[i].text[a:b].strip()
+        whole = doc.lines[i].text
+        if len(text) < 3 or ":" in whole or ADDRESS_LINE.search(whole) or not re.search(r"[^\W\d_]{2}", text):
+            continue
+        if doc.find(vocab.BUYER + vocab.SELLER) and any(
+            lb.line == i for lb in doc.find(vocab.BUYER + vocab.SELLER)
+        ):
+            continue
+        f = doc.field(
+            text,
+            i,
+            a,
+            a + len(doc.lines[i].text[a:b].rstrip()),
+            [f"line under “{_label_text(doc, lab)}”"],
+            False,
+        )
+        f.confidence = "medium"
+        return f
+    return None
+
+
 def parties(doc: Doc) -> tuple[Field | None, Field | None]:
     buyer = next((f for f in (_company_near(doc, lab) for lab in doc.find(vocab.BUYER)) if f), None)
+    if buyer is None:
+        buyer = next((f for f in (_name_below(doc, lab) for lab in doc.find(vocab.BUYER)) if f), None)
     seller = None
     for lab in doc.find(vocab.SELLER):
         f = _company_near(doc, lab)
@@ -333,19 +412,28 @@ def totals(doc: Doc) -> Totals:
     net = vat = total = None
     breakdown: list[VatRow] = []
     vat_lines = []
+    vat_total = None
+    totals_found: list[tuple[int, Field, bool]] = []
     for i, ln in enumerate(doc.lines):
         has_amount = bool(amounts_in(ln.text))
         if not has_amount:
             continue
-        is_net = doc.has(i, vocab.NET)
-        is_vat = doc.has(i, vocab.VAT) and not is_net
-        is_total = doc.has(i, vocab.TOTAL) and not is_net and not (is_vat and percents_in(ln.text))
+        including = doc.has(i, vocab.INCLUDING)
+        is_net = doc.has(i, vocab.NET) and not including
+        is_vat = doc.has(i, vocab.VAT) and not is_net and not including
+        is_total = doc.has(i, vocab.TOTAL) and not is_net
         if is_net:
             net = _amount_field(doc, i, -1, ["net / subtotal label"])
+        elif is_vat and not percents_in(ln.text) and (is_total or len(amounts_in(ln.text)) == 1):
+            # "VAT total 75.04", "Steuerbetrag 37,62": one VAT amount without a rate is the VAT total;
+            # rows of a VAT breakdown carry a rate and usually the taxable amount.
+            vat_total = _amount_field(doc, i, -1, ["VAT total label"])
         elif is_vat and (percents_in(ln.text) or not is_total):
             vat_lines.append(i)
         elif is_total:
-            total = _amount_field(doc, i, -1, ["total label"])
+            f = _amount_field(doc, i, -1, ["total label"])
+            if f is not None:
+                totals_found.append((i, f, doc.has(i, vocab.TOTAL_DUE) and not doc.has(i, vocab.TOTAL_GROSS)))
     # Keep only VAT lines after the item table area: they follow the net line when there is one.
     if net is not None:
         vat_lines = [i for i in vat_lines if net.box and doc.lines[i].page >= net.box.page]
@@ -362,7 +450,10 @@ def totals(doc: Doc) -> Totals:
             else Field(None)
         )
         breakdown.append(VatRow(rate, base, doc.field(fmt_amount(value), i, s, e, ["VAT line"], True)))
-    if len(breakdown) == 1:
+    total = _choose_total(totals_found, net, vat_total, breakdown)
+    if vat_total is not None:
+        vat = vat_total
+    elif len(breakdown) == 1:
         vat = breakdown[0].vat
     elif len(breakdown) > 1:
         values = [Decimal(r.vat.value) for r in breakdown if r.vat.value]
@@ -377,12 +468,15 @@ def totals(doc: Doc) -> Totals:
     return Totals(net, vat, total, breakdown)
 
 
-def _assign_vat_ids(vats: list[Field], seller: Field | None, buyer: Field | None) -> tuple[Field | None, Field | None]:
+def _assign_vat_ids(
+    vats: list[Field], seller: Field | None, buyer: Field | None
+) -> tuple[Field | None, Field | None]:
     """Give each VAT number to the party whose name is printed nearest above it.
 
     Seller and buyer blocks are often side by side, so distance counts in both
     directions; a VAT number belongs to a block when it is below the name.
     """
+
     def dist(v: Field, party: Field | None) -> float:
         if party is None or party.box is None or v.box is None or v.box.page != party.box.page:
             return float("inf")
@@ -405,6 +499,27 @@ def _assign_vat_ids(vats: list[Field], seller: Field | None, buyer: Field | None
     if buyer_vat is None and rest:
         buyer_vat = rest.pop(0)
     return seller_vat, buyer_vat
+
+
+def _choose_total(found: list[tuple[int, Field, bool]], net: Field | None, vat_total: Field | None,
+                  rows: list[VatRow]) -> Field | None:  # fmt: skip
+    """The invoice total: the candidate equal to net + VAT if any, else the last gross total, else the last one.
+
+    An "amount due" can be lower than the invoice total (prepayments, credits),
+    so a gross total label ("Rechnungsbetrag", "Total incl. VAT") is preferred.
+    """
+    if not found:
+        return None
+    vat_value = vat_total.value if vat_total is not None else None
+    if vat_value is None and rows and all(r.vat.value for r in rows):
+        vat_value = fmt_amount(sum((Decimal(r.vat.value) for r in rows if r.vat.value), Decimal(0)))
+    if net is not None and net.value and vat_value:
+        expected = Decimal(net.value) + Decimal(vat_value)
+        for _, f, _ in reversed(found):
+            if f.value and abs(Decimal(f.value) - expected) <= Decimal("0.02"):
+                return f
+    gross = [f for _, f, due in found if not due]
+    return gross[-1] if gross else found[-1][1]
 
 
 def extract_fields(doc: Doc) -> tuple[dict[str, Field | None], list[VatRow]]:

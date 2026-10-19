@@ -13,7 +13,13 @@ from .model import HEADER_FIELDS, Field, Page, Result, Source
 from .pdf import PdfError, read_pdf, render_pages
 
 MAX_BYTES = 25 * 1024 * 1024
-IMAGE_MAGIC = {b"\x89PNG": "png", b"\xff\xd8\xff": "jpeg", b"II*\x00": "tiff", b"MM\x00*": "tiff", b"RIFF": "webp"}
+IMAGE_MAGIC = {
+    b"\x89PNG": "png",
+    b"\xff\xd8\xff": "jpeg",
+    b"II*\x00": "tiff",
+    b"MM\x00*": "tiff",
+    b"RIFF": "webp",
+}
 
 
 class UnsupportedFile(ValueError):
@@ -32,7 +38,12 @@ def sniff(data: bytes) -> str:
     raise UnsupportedFile("Supported files: PDF, PNG, JPEG, TIFF, WebP, and e-invoice XML.")
 
 
-def extract(data: bytes, file_name: str = "document") -> Result:
+def extract(data: bytes, file_name: str = "document", use_embedded_xml: bool = True) -> Result:
+    """Read a PDF, image or e-invoice XML.
+
+    ``use_embedded_xml=False`` ignores e-invoice data embedded in a PDF and
+    reads the printed text instead (used to evaluate the text and OCR paths).
+    """
     if len(data) > MAX_BYTES:
         raise UnsupportedFile(f"The file is larger than {MAX_BYTES // (1024 * 1024)} MB.")
     kind = sniff(data)
@@ -50,14 +61,16 @@ def extract(data: bytes, file_name: str = "document") -> Result:
         except PdfError:
             raise
         pages = content.pages
-        if content.embedded_xml is not None:
+        if content.embedded_xml is not None and use_embedded_xml:
             name, xml = content.embedded_xml
             try:
                 fmt, fields, items, vat_rows = einvoice.parse(xml)
                 return _result(file_name, "pdf", pages, "xml", f"{fmt}, embedded as {name}", fields, items, vat_rows,
                                warnings)  # fmt: skip
             except einvoice.EInvoiceError as exc:
-                warnings.append(f"The PDF contains {name}, but it could not be read ({exc}); using the printed text.")
+                warnings.append(
+                    f"The PDF contains {name}, but it could not be read ({exc}); using the printed text."
+                )
         words = content.words
         if content.scanned_pages:
             from .ocr import ocr_image
@@ -92,7 +105,7 @@ def extract(data: bytes, file_name: str = "document") -> Result:
     items = extract_lines(doc)
     if not items:
         warnings.append("No line item table was recognised.")
-    return _result(file_name, kind, pages, method, None, fields, items, vat_rows, warnings)  # type: ignore[arg-type]
+    return _result(file_name, kind, pages, method, None, fields, items, vat_rows, warnings)
 
 
 def _result(file_name, kind, pages, method, fmt, fields, items, vat_rows, warnings) -> Result:  # type: ignore[no-untyped-def]

@@ -20,7 +20,9 @@ def server_url() -> Iterator[str]:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
-    server = uvicorn.Server(uvicorn.Config(create_app(TOKEN, port), host="127.0.0.1", port=port, log_level="warning"))
+    server = uvicorn.Server(
+        uvicorn.Config(create_app(TOKEN, port), host="127.0.0.1", port=port, log_level="warning")
+    )
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
     for _ in range(100):

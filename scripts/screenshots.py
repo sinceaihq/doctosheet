@@ -16,7 +16,9 @@ if __name__ == "__main__":
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
-    server = uvicorn.Server(uvicorn.Config(create_app("shot", port), host="127.0.0.1", port=port, log_level="warning"))
+    server = uvicorn.Server(
+        uvicorn.Config(create_app("shot", port), host="127.0.0.1", port=port, log_level="warning")
+    )
     threading.Thread(target=server.run, daemon=True).start()
     while not server.started:
         time.sleep(0.05)

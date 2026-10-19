@@ -36,13 +36,22 @@ def _run(job: tuple[str, bytes, str]) -> dict:
         "seconds": time.perf_counter() - t0,
         "method": r.method,
         "fields": {k: (None if f.computed else f.value) for k, f in r.fields.items()},
-        "confidence": {k: f.confidence for k, f in r.fields.items() if f.value is not None and not f.computed},
+        "confidence": {
+            k: f.confidence for k, f in r.fields.items() if f.value is not None and not f.computed
+        },
         "lines": [
-            {"description": li.description.value, "quantity": li.quantity.value, "unit_price": li.unit_price.value,
-             "vat_rate": li.vat_rate.value, "amount": li.amount.value}  # fmt: skip
+            {
+                "description": li.description.value,
+                "quantity": li.quantity.value,
+                "unit_price": li.unit_price.value,
+                "vat_rate": li.vat_rate.value,
+                "amount": li.amount.value,
+            }
             for li in r.lines
         ],
-        "vat_breakdown": [{"rate": v.rate.value, "base": v.base.value, "vat": v.vat.value} for v in r.vat_breakdown],
+        "vat_breakdown": [
+            {"rate": v.rate.value, "base": v.base.value, "vat": v.vat.value} for v in r.vat_breakdown
+        ],
         "checks": [c.status for c in r.checks if c.name == "net + VAT = total"],
     }
 
@@ -67,7 +76,7 @@ def line_scores(gold_rows: list[dict], preds: list[dict]) -> dict:
     correct = {k: 0 for k in keys}
     rate_printed = rate_printed_ok = 0
     total = exact_docs = count_ok = 0
-    for g, p in zip(gold_rows, preds):
+    for g, p in zip(gold_rows, preds, strict=True):
         gl, pl = g["lines"], p.get("lines", [])
         count_ok += len(gl) == len(pl)
         doc_ok = len(gl) == len(pl)
@@ -118,12 +127,14 @@ def main() -> None:
     with ProcessPoolExecutor(args.workers) as pool:
         preds = list(pool.map(_run, jobs, chunksize=4))
     wall = time.perf_counter() - t0
-    gold = [{"id": r["id"], "fields": r["fields"], "locale": r["locale"], "layout": r["layout"]} for r in rows]
+    gold = [
+        {"id": r["id"], "fields": r["fields"], "locale": r["locale"], "layout": r["layout"]} for r in rows
+    ]
     s = score(gold, [{"id": p["id"], "fields": p.get("fields", {})} for p in preds])
     lines = line_scores(rows, preds)
     errors = [p for p in preds if "error" in p]
     conf = {"high": [0, 0], "medium": [0, 0], "low": [0, 0]}
-    for g, p in zip(rows, preds):
+    for g, p in zip(rows, preds, strict=True):
         for k, c in p.get("confidence", {}).items():
             conf[c][1] += 1
             conf[c][0] += str(p["fields"][k]) == str(g["fields"][k])

@@ -33,7 +33,7 @@ def fi_invoice() -> bytes:
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4, invariant=1)
     c.setTitle("Lasku 2026-1047")
-    w, h = A4
+    _w, h = A4
     c.setFont("Helvetica-Bold", 18)
     c.drawString(50, h - 60, "Pohjoistuuli Design Oy")
     c.setFont("Helvetica", 10)
@@ -73,13 +73,21 @@ def fi_invoice() -> bytes:
     vat = (net * Decimal("0.255")).quantize(Decimal("0.01"))
     total = net + vat
     yy = y - 22 - len(items) * 18 - 20
-    for k, v, bold in [("Veroton yhteensä", net, False), ("ALV 25,5 %", vat, False), ("Maksettava yhteensä", total, True)]:
+    for k, v, bold in [
+        ("Veroton yhteensä", net, False),
+        ("ALV 25,5 %", vat, False),
+        ("Maksettava yhteensä", total, True),
+    ]:
         c.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
         c.drawString(360, yy, k)
         c.drawRightString(545, yy, f"{eu(v)} €")
         yy -= 16
     c.setFont("Helvetica", 9)
-    c.drawString(50, 60, "Pohjoistuuli Design Oy · Rantakatu 12 B, 90100 Oulu · IBAN: FI21 1234 5600 0007 85 · BIC: NDEAFIHH")
+    c.drawString(
+        50,
+        60,
+        "Pohjoistuuli Design Oy · Rantakatu 12 B, 90100 Oulu · IBAN: FI21 1234 5600 0007 85 · BIC: NDEAFIHH",
+    )
     c.showPage()
     c.save()
     return buf.getvalue()
@@ -94,7 +102,7 @@ def de_items() -> list[tuple[str, int, Decimal, Decimal]]:
 def de_invoice_pdf() -> bytes:
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4, invariant=1)
-    w, h = A4
+    _w, h = A4
     c.setFont("Helvetica-Bold", 16)
     c.drawString(50, h - 60, "Bergwerk Haustechnik GmbH")
     c.setFont("Helvetica", 10)
@@ -185,7 +193,7 @@ def de_cii_xml() -> bytes:
 
 
 def ubl_xml() -> bytes:
-    return """<?xml version="1.0" encoding="UTF-8"?>
+    return b"""<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
 <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
 <cbc:ID>NL-2026-552</cbc:ID><cbc:IssueDate>2026-02-20</cbc:IssueDate><cbc:DueDate>2026-03-22</cbc:DueDate>
@@ -196,7 +204,7 @@ def ubl_xml() -> bytes:
 <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">252.00</cbc:TaxAmount><cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">1200.00</cbc:TaxableAmount><cbc:TaxAmount currencyID="EUR">252.00</cbc:TaxAmount><cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>21</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>
 <cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID="EUR">1200.00</cbc:LineExtensionAmount><cbc:TaxExclusiveAmount currencyID="EUR">1200.00</cbc:TaxExclusiveAmount><cbc:TaxInclusiveAmount currencyID="EUR">1452.00</cbc:TaxInclusiveAmount><cbc:PayableAmount currencyID="EUR">1452.00</cbc:PayableAmount></cac:LegalMonetaryTotal>
 <cac:InvoiceLine><cbc:ID>1</cbc:ID><cbc:InvoicedQuantity unitCode="HUR">8</cbc:InvoicedQuantity><cbc:LineExtensionAmount currencyID="EUR">1200.00</cbc:LineExtensionAmount><cac:Item><cbc:Name>Vertaling handleiding (uren)</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>21</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item><cac:Price><cbc:PriceAmount currencyID="EUR">150.00</cbc:PriceAmount></cac:Price></cac:InvoiceLine>
-</Invoice>""".encode()
+</Invoice>"""
 
 
 def receipt_png() -> bytes:
@@ -212,7 +220,11 @@ def receipt_png() -> bytes:
     c.drawString(14, 330, "Kuitin numero: 88123")
     c.drawString(14, 318, "Päivämäärä: 12.3.2026")
     y = 290
-    for q, d, p in [(2, "Cappuccino", Decimal("4.20")), (1, "Korvapuusti", Decimal("3.50")), (3, "Vesi 0,5 l", Decimal("2.00"))]:
+    for q, d, p in [
+        (2, "Cappuccino", Decimal("4.20")),
+        (1, "Korvapuusti", Decimal("3.50")),
+        (3, "Vesi 0,5 l", Decimal("2.00")),
+    ]:
         c.drawString(14, y, f"{q} x {d} à {eu(p)}")
         c.drawRightString(212, y, eu(q * p))
         y -= 14
@@ -235,7 +247,9 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "invoice-fi.pdf").write_bytes(fi_invoice())
     (OUT / "invoice-de-zugferd.pdf").write_bytes(
-        generate_from_binary(de_invoice_pdf(), de_cii_xml(), flavor="factur-x", level="en16931", check_xsd=False)
+        generate_from_binary(
+            de_invoice_pdf(), de_cii_xml(), flavor="factur-x", level="en16931", check_xsd=False
+        )
     )
     (OUT / "invoice-nl-peppol.xml").write_bytes(ubl_xml())
     (OUT / "receipt-fi.png").write_bytes(receipt_png())

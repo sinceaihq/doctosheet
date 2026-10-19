@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from decimal import Decimal
+from itertools import pairwise
 
 from . import vocab
 from .fields import Doc, norm_map
@@ -44,7 +45,11 @@ def _header_columns(line: Line) -> list[Column] | None:
         if all(f[1] <= t[0] or f[0] >= t[1] for t in taken) and f[2] not in {t[2] for t in taken}:
             taken.append(f)
     kinds = {t[2] for t in taken}
-    if len(taken) < 3 or not ({"description", "amount"} & kinds) or not ({"quantity", "unit_price", "amount"} & kinds):
+    if (
+        len(taken) < 3
+        or not ({"description", "amount"} & kinds)
+        or not ({"quantity", "unit_price", "amount"} & kinds)
+    ):
         return None
     if any(amounts_in(line.text)):  # a header has no amounts
         return None
@@ -54,7 +59,7 @@ def _header_columns(line: Line) -> list[Column] | None:
         if box:
             cols.append(Column(kind, box.x0, box.x1))
     cols.sort(key=lambda c: c.x0)
-    for a, b in zip(cols, cols[1:]):
+    for a, b in pairwise(cols):
         # Numbers are usually right-aligned under their label, text left-aligned:
         # split between a column's label end and the next label's start.
         mid = (a.x1 + b.x0) / 2
@@ -124,22 +129,37 @@ def _row(doc: Doc, idx: int, cols: list[Column]) -> LineItem | None:
             return None
         s, e, amount = found[-1]
         amount_cell = (line.text[s:e], s, e)
+    assert amount_cell is not None
     out: dict[str, Field] = {}
     out["amount"] = _field(doc, idx, fmt_amount(amount), amount_cell[1], amount_cell[2], [])
     q = cells.get("quantity")
     qty = parse_quantity(q[0].split()[0]) if q and q[0].split() else None
-    out["quantity"] = _field(doc, idx, None if qty is None else f"{qty.normalize():f}", q[1], q[2], []) if q else Field(None)
+    out["quantity"] = (
+        _field(doc, idx, None if qty is None else f"{qty.normalize():f}", q[1], q[2], [])
+        if q
+        else Field(None)
+    )
     p = cells.get("unit_price")
     price = parse_amount(p[0]) if p else None
-    out["unit_price"] = _field(doc, idx, fmt_amount(price) if price is not None else None, p[1], p[2], []) if p else Field(None)
+    out["unit_price"] = (
+        _field(doc, idx, fmt_amount(price) if price is not None else None, p[1], p[2], [])
+        if p
+        else Field(None)
+    )
     v = cells.get("vat_rate")
     pct = percents_in(v[0]) if v else []
     if v and pct:
-        out["vat_rate"] = _field(doc, idx, f"{pct[0][2].normalize():f}", v[1] + pct[0][0], v[1] + pct[0][1], [])
+        out["vat_rate"] = _field(
+            doc, idx, f"{pct[0][2].normalize():f}", v[1] + pct[0][0], v[1] + pct[0][1], []
+        )
     else:
         out["vat_rate"] = Field(None)
     u = cells.get("unit")
-    out["unit"] = _field(doc, idx, u[0].strip(), u[1], u[2], []) if u and not any(ch.isdigit() for ch in u[0]) else Field(None)
+    out["unit"] = (
+        _field(doc, idx, u[0].strip(), u[1], u[2], [])
+        if u and not any(ch.isdigit() for ch in u[0])
+        else Field(None)
+    )
     d = cells.get("description")
     if d:
         desc = d[0].strip()
@@ -157,7 +177,13 @@ def _row(doc: Doc, idx: int, cols: list[Column]) -> LineItem | None:
         return None
     _cross_check(out)
     return LineItem(
-        out["description"], out["quantity"], out["unit"], out["unit_price"], out["vat_rate"], out["amount"], line.box
+        out["description"],
+        out["quantity"],
+        out["unit"],
+        out["unit_price"],
+        out["vat_rate"],
+        out["amount"],
+        line.box,
     )
 
 
@@ -217,7 +243,9 @@ def _receipt_lines(doc: Doc) -> list[LineItem]:
             desc_text = between
         elif re.search(r"[^\W\d_]", before):
             desc_idx, ds, desc_text = i, line.text.index(before), before
-        elif i > 0 and not amounts_in(doc.lines[i - 1].text) and re.search(r"[^\W\d_]", doc.lines[i - 1].text):
+        elif (
+            i > 0 and not amounts_in(doc.lines[i - 1].text) and re.search(r"[^\W\d_]", doc.lines[i - 1].text)
+        ):
             desc_idx, ds, desc_text = i - 1, 0, doc.lines[i - 1].text.strip()
         else:
             continue
