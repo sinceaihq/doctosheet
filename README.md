@@ -136,7 +136,7 @@ layouts about one in ten "✓" values was still wrong. Full results, method and 
 
 - Documents are processed on your computer. The app listens only on `127.0.0.1`, uses a random access token per
   session and refuses requests from other host names; files are kept in memory until you stop it.
-- Each file is parsed in a separate process with a time limit and a memory cap; embedded scripts, forms and actions in
+- Each file is parsed in a separate process with a time limit and (on Linux) a memory cap; embedded scripts, forms and actions in
   PDFs are never executed; XML is parsed without external entities.
 - No telemetry and no network access, except the one-time OCR model download.
 

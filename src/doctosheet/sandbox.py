@@ -2,7 +2,9 @@
 
 A malformed or malicious PDF must not hang or exhaust the application: each
 file is processed in a child process that is killed after ``timeout`` seconds
-and (on Linux and macOS) cannot allocate more than ``memory_mb``.
+and, on Linux, cannot allocate more than ``memory_mb``. macOS does not enforce
+address-space limits (setting one fails there), so on macOS and Windows only the
+time limit applies.
 """
 
 from __future__ import annotations
@@ -23,12 +25,25 @@ class ExtractionFailed(RuntimeError):
     pass
 
 
-def _child(conn: Connection, data: bytes, name: str, memory_mb: int) -> None:
-    if sys.platform != "win32":
-        import resource
+def limit_memory(memory_mb: int) -> bool:
+    """Cap this process's address space; False where the platform does not allow it."""
+    if sys.platform == "win32":
+        return False
+    import resource
 
-        limit = memory_mb * 1024 * 1024
-        resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+    limit = memory_mb * 1024 * 1024
+    try:
+        _, hard = resource.getrlimit(resource.RLIMIT_AS)
+        if hard != resource.RLIM_INFINITY:
+            limit = min(limit, hard)
+        resource.setrlimit(resource.RLIMIT_AS, (limit, hard if hard != resource.RLIM_INFINITY else limit))
+    except (ValueError, OSError):  # macOS: "current limit exceeds maximum limit"
+        return False
+    return True
+
+
+def _child(conn: Connection, data: bytes, name: str, memory_mb: int) -> None:
+    limit_memory(memory_mb)
     try:
         from .extract import extract
 
