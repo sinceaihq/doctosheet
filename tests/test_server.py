@@ -56,3 +56,14 @@ def test_broken_pdf_is_reported_not_crashing() -> None:
     )
     assert res.status_code == 422
     assert res.json()["detail"]
+
+
+def test_malformed_export_requests_are_rejected_cleanly() -> None:
+    c = client()
+    h = {"X-DocToSheet-Token": TOKEN}
+    assert c.post("/api/export", headers=h, content=b"not json").status_code == 400
+    assert c.post("/api/export", headers=h, json=[1, 2]).status_code == 400
+    assert c.post("/api/export", headers=h, json={"documents": []}).status_code == 400
+    assert c.post("/api/export?format=pdf", headers=h, json={"documents": [{}]}).status_code == 400
+    assert c.post("/api/export", headers=h, json={"documents": [{"fields": 3}]}).status_code == 422
+    assert c.post("/api/export?format=csv", headers=h, json={"documents": ["x"]}).status_code == 422

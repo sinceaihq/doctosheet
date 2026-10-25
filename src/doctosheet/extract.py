@@ -10,7 +10,7 @@ from .fields import Doc, extract_fields
 from .layout import Word, group_lines
 from .lines import extract_lines
 from .model import FIELD_LABELS, HEADER_FIELDS, Field, Page, Result, Source
-from .pdf import PdfError, read_pdf, render_pages
+from .pdf import read_pdf, render_pages
 
 MAX_BYTES = 25 * 1024 * 1024
 IMAGE_MAGIC = {
@@ -56,10 +56,7 @@ def extract(data: bytes, file_name: str = "document", use_embedded_xml: bool = T
     words: list[Word] = []
     method: Source = "text"
     if kind == "pdf":
-        try:
-            content = read_pdf(data)
-        except PdfError:
-            raise
+        content = read_pdf(data)
         pages = content.pages
         if content.embedded_xml is not None and use_embedded_xml:
             name, xml = content.embedded_xml
@@ -87,11 +84,16 @@ def extract(data: bytes, file_name: str = "document", use_embedded_xml: bool = T
 
         from .ocr import ocr_image
 
-        image = Image.open(io.BytesIO(data))
-        image.load()
-        if image.width * image.height > 60_000_000:
-            raise UnsupportedFile("The image is too large.")
-        image = image.convert("RGB")
+        try:
+            image = Image.open(io.BytesIO(data))
+            if image.width * image.height > 60_000_000:
+                raise UnsupportedFile("The image is too large.")
+            image.load()
+            image = image.convert("RGB")
+        except UnsupportedFile:
+            raise
+        except (OSError, ValueError, SyntaxError, Image.DecompressionBombError) as exc:
+            raise UnsupportedFile(f"The image is damaged or not supported ({type(exc).__name__}).") from exc
         pages = [Page(float(image.width), float(image.height))]
         words = ocr_image(image, 0)
         method = "ocr"

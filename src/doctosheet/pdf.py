@@ -53,26 +53,31 @@ def read_pdf(data: bytes) -> PdfContent:
         pdf = pdfplumber.open(io.BytesIO(data))
     except Exception as exc:  # malformed or encrypted
         raise PdfError(f"Could not open the PDF ({type(exc).__name__}).") from exc
-    with pdf:
-        if len(pdf.pages) > MAX_PAGES:
-            raise PdfError(f"The PDF has {len(pdf.pages)} pages; at most {MAX_PAGES} are supported.")
-        pages: list[Page] = []
-        words: list[Word] = []
-        scanned: list[int] = []
-        for i, page in enumerate(pdf.pages):
-            pages.append(Page(float(page.width), float(page.height)))
-            page_words = page.extract_words(keep_blank_chars=False, use_text_flow=False, x_tolerance=1.5)
-            chars = sum(len(w["text"]) for w in page_words)
-            if chars < MIN_TEXT_CHARS:
-                scanned.append(i)
-                continue
-            for w in page_words:
-                words.append(
-                    Word(
-                        clean_text(w["text"]),
-                        Box(i, float(w["x0"]), float(w["top"]), float(w["x1"]), float(w["bottom"])),
+    try:
+        with pdf:
+            if len(pdf.pages) > MAX_PAGES:
+                raise PdfError(f"The PDF has {len(pdf.pages)} pages; at most {MAX_PAGES} are supported.")
+            pages: list[Page] = []
+            words: list[Word] = []
+            scanned: list[int] = []
+            for i, page in enumerate(pdf.pages):
+                pages.append(Page(float(page.width), float(page.height)))
+                page_words = page.extract_words(keep_blank_chars=False, use_text_flow=False, x_tolerance=1.5)
+                chars = sum(len(w["text"]) for w in page_words)
+                if chars < MIN_TEXT_CHARS:
+                    scanned.append(i)
+                    continue
+                for w in page_words:
+                    words.append(
+                        Word(
+                            clean_text(w["text"]),
+                            Box(i, float(w["x0"]), float(w["top"]), float(w["x1"]), float(w["bottom"])),
+                        )
                     )
-                )
+    except (PdfError, MemoryError):
+        raise
+    except Exception as exc:  # damaged content streams, fonts, cross-reference tables ...
+        raise PdfError(f"The PDF is damaged and could not be read ({type(exc).__name__}).") from exc
     return PdfContent(pages, words, scanned, embedded_files(data))
 
 
@@ -82,12 +87,11 @@ def embedded_files(data: bytes) -> tuple[str, bytes] | None:
 
     try:
         reader = PdfReader(io.BytesIO(data))
-        attachments = reader.attachments
-    except Exception:
+        for name, contents in reader.attachments.items():
+            if (name.lower() in EMBEDDED_XML_NAMES or name.lower().endswith(".xml")) and contents:
+                return name, contents[0]
+    except Exception:  # a damaged attachment table: read the printed text instead
         return None
-    for name, contents in attachments.items():
-        if (name.lower() in EMBEDDED_XML_NAMES or name.lower().endswith(".xml")) and contents:
-            return name, contents[0]
     return None
 
 
@@ -95,7 +99,10 @@ def render_pages(data: bytes, indices: list[int], dpi: int = 200) -> list[tuple[
     """Render pages for OCR: (page index, PIL image, scale from pixels to PDF points)."""
     import pypdfium2 as pdfium
 
-    doc = pdfium.PdfDocument(data)
+    try:
+        doc = pdfium.PdfDocument(data)
+    except Exception as exc:
+        raise PdfError(f"The PDF is damaged and could not be rendered ({type(exc).__name__}).") from exc
     try:
         out = []
         for i in indices:
@@ -104,5 +111,9 @@ def render_pages(data: bytes, indices: list[int], dpi: int = 200) -> list[tuple[
             image = page.render(scale=scale).to_pil().convert("RGB")
             out.append((i, image, 1 / scale))
         return out
+    except MemoryError:
+        raise
+    except Exception as exc:
+        raise PdfError(f"A page of the PDF could not be rendered ({type(exc).__name__}).") from exc
     finally:
         doc.close()

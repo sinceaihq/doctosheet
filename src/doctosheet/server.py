@@ -106,22 +106,32 @@ def create_app(token: str, port: int = 0) -> FastAPI:
     async def export(
         request: Request, format: str = "xlsx", table: str = "invoices", dialect: str = "standard"
     ) -> Response:
-        body = await request.json()
-        docs = body.get("documents", [])
+        try:
+            body = await request.json()
+        except ValueError as exc:
+            raise HTTPException(400, "The request body is not JSON.") from exc
+        docs = body.get("documents", []) if isinstance(body, dict) else None
         if not isinstance(docs, list) or not docs:
             raise HTTPException(400, "No documents to export.")
+        if not (
+            format == "xlsx"
+            or (format == "csv" and table in ("invoices", "lines", "vat") and dialect in ("standard", "eu"))
+        ):
+            raise HTTPException(400, "Unknown export format.")
+        try:
+            content = to_xlsx(docs) if format == "xlsx" else to_csv(docs, table, dialect).encode("utf-8-sig")
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            raise HTTPException(422, "These documents are not in the format the app produces.") from exc
         if format == "xlsx":
             return Response(
-                to_xlsx(docs),
+                content,
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 headers={"Content-Disposition": 'attachment; filename="doctosheet.xlsx"'},
             )
-        if format == "csv" and table in ("invoices", "lines", "vat") and dialect in ("standard", "eu"):
-            return Response(
-                to_csv(docs, table, dialect).encode("utf-8-sig"),
-                media_type="text/csv; charset=utf-8",
-                headers={"Content-Disposition": f'attachment; filename="doctosheet-{table}.csv"'},
-            )
-        raise HTTPException(400, "Unknown export format.")
+        return Response(
+            content,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="doctosheet-{table}.csv"'},
+        )
 
     return app

@@ -28,7 +28,8 @@ def _serve(args: argparse.Namespace) -> None:
     token = secrets.token_urlsafe(24)
     url = f"http://127.0.0.1:{port}/#token={token}"
     print(
-        f"DocToSheet {__version__} is running at:\n\n  {url}\n\nPress Ctrl+C to stop. Files stay on this computer."
+        f"DocToSheet {__version__} is running at:\n\n  {url}\n\nPress Ctrl+C to stop. Files stay on this computer.",
+        flush=True,
     )
     if not args.no_browser:
         webbrowser.open(url)
