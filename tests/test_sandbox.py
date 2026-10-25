@@ -1,4 +1,3 @@
-import resource
 import sys
 
 import pytest
@@ -8,6 +7,8 @@ from doctosheet import sandbox
 
 @pytest.mark.skipif(sys.platform == "win32", reason="no resource limits on Windows")
 def test_memory_limit_failure_is_tolerated(monkeypatch):
+    import resource
+
     # macOS refuses RLIMIT_AS ("current limit exceeds maximum limit"); extraction must still run.
     def refuse(*_args):
         raise ValueError("current limit exceeds maximum limit")
@@ -18,6 +19,8 @@ def test_memory_limit_failure_is_tolerated(monkeypatch):
 
 @pytest.mark.skipif(sys.platform == "win32", reason="no resource limits on Windows")
 def test_memory_limit_respects_hard_limit(monkeypatch):
+    import resource
+
     calls = []
     monkeypatch.setattr(resource, "getrlimit", lambda _r: (resource.RLIM_INFINITY, 512 * 1024 * 1024))
     monkeypatch.setattr(resource, "setrlimit", lambda r, lim: calls.append(lim))
