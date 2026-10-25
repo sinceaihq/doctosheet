@@ -70,11 +70,13 @@ for (const t of [drop, document.body]) {
 }
 
 async function addFiles(files: File[]): Promise<void> {
+  // A single new file (a sample, one dropped invoice) is opened; a batch keeps the current review in place.
+  const focus = files.length === 1;
   for (const file of files) {
     const doc: Doc = { id: crypto.randomUUID(), name: file.name, status: "processing", file, reviewed: false };
     docs.push(doc);
     renderList();
-    if (!current) void open(doc);
+    if (!current || focus) void open(doc);
     try {
       const body = new FormData();
       body.append("file", file);
