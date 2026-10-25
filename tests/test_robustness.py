@@ -1,4 +1,8 @@
-"""Damaged input must produce a clear error (a ValueError subclass), never a crash with a library exception."""
+"""Damaged input must produce a clear error, never a crash with a library exception.
+
+Clear errors are ValueError subclasses, and OcrUnavailable when a page has no readable
+text and the OCR extra is not installed.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from doctosheet.extract import extract
+from doctosheet.ocr import OcrUnavailable
 
 SAMPLES = Path(__file__).parent / "samples"
 
@@ -28,7 +33,7 @@ def test_damaged_documents_fail_cleanly(name: str) -> None:
     for i, data in enumerate(_variants((SAMPLES / name).read_bytes(), seed=len(name))):
         try:
             extract(data, name)
-        except ValueError as exc:
+        except (ValueError, OcrUnavailable) as exc:
             assert str(exc), f"variant {i}: empty error message"
 
 
